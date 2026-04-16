@@ -12,167 +12,92 @@ Deliver a working end-to-end flow for one pathway:
 
 ## 2. Scope Delivered
 
-### 2.1 Input -> Route
-
-- API accepts symptom payload via `POST /api/v1/workflows`.
-- Routing logic is deterministic and maps back-pain keywords to `MSK`.
-
-### 2.2 Route -> Decision
-
-- Rules engine is deterministic (no LLM).
-- For MSK:
-- `red_flags = true` OR `pain_level >= 6` -> `IMAGING_FIRST`
-- otherwise -> `PT_FIRST`
-
-### 2.3 Decision -> Next Action
-
-- Action worker executes one concrete mock action:
-- `PT referral created` or `Imaging referral created`.
-- Workflow is marked completed with:
-- `actualCare`
-- `isAdhered`
-- `completedAt`
-
-### 2.4 Governance Log
-
-- Each transition is recorded with:
-- `fromState`
-- `toState`
-- `actor`
-- `narrative`
-- `payloadSnapshot`
-- Readable summary is returned by logs API.
-- Adherence is captured in final action snapshot.
-
-## 3. Data Model (Persistence)
-
-### WorkflowRecord
-
-- `id`
-- `idempotencyKey` (unique)
-- `traceId`
-- `status`
-- `contextData`
-- `actualCare`
-- `isAdhered`
-- `retryCount`
-- `completedAt`
-- `createdAt`
-- `updatedAt`
-
-### GovernanceLog
-
-- `id`
-- `workflowId`
-- `traceId`
-- `fromState`
-- `toState`
-- `actor`
-- `narrative`
-- `payloadSnapshot`
-- `createdAt`
-
-## 4. API Endpoints
-
-- `POST /api/v1/workflows`
-- `GET /api/v1/workflows/:id`
-- `GET /api/v1/workflows/:id/logs`
-- `GET /api/v1/workflows?status=COMPLETED&limit=20&offset=0`
-
-## 5. API Request/Response Examples
-
-### 5.1 Create Workflow (MSK happy path)
-
-Request:
-
-```http
-POST /api/v1/workflows
-Content-Type: application/json
-
-{
-  "idempotencyKey": "validate_002",
-  "payload": {
-    "symptom": "lower back pain",
-    "pain_level": 3,
-    "duration": "2 weeks",
-    "red_flags": false,
-    "age": 34,
-    "patient_id": "patient_001"
-  }
-}
-```
-
-Response:
-
-```json
-{
-  "workflow_id": "cmo15ay910001umco7wqlhr5j",
-  "status": "INITIATED"
-}
-```
-
-### 5.2 Get Workflow (normalized context order)
-
-Request:
-
-```http
-GET /api/v1/workflows/cmo15ay910001umco7wqlhr5j
-```
-
-Response:
-
-```json
-{
-  "id": "cmo15ay910001umco7wqlhr5j",
-  "idempotencyKey": "validate_002",
-  "traceId": "70f64db8-8f35-4321-bdcd-e97f3495e5ca",
-  "status": "COMPLETED",
-  "contextData": {
-    "input": {
-      "age": 34,
-      "symptom": "lower back pain",
-      "duration": "2 weeks",
-      "red_flags": false,
-      "pain_level": 3,
-      "patient_id": "patient_001"
+      "index": 1,
+      "label": "Intake",
+      "at": "2026-04-16T07:16:01.381Z",
+      "displayLine": "1. [Intake] - 10:56:17 am",
+      "message": "Patient reported lower back pain (pain level 3/10, red flags: no). Workflow created and queued for routing.",
+      "step": "INTAKE",
+      "transition": "CREATED -> QUEUED",
+      "actor": "system",
+      "pathway": {
+        "route": "MSK",
+        "confidence": 0.95,
+        "reasoning": "Keyword match - deterministic rules"
+      },
+      "decision": null,
+      "action": null,
+      "adherence": null
     },
-    "routingDecision": {
-      "route": "MSK",
-      "reasoning": "Keyword match - deterministic rules",
-      "confidence": 0.95
+    {
+      "index": 2,
+      "label": "Route",
+      "at": "2026-04-16T07:16:01.425Z",
+      "displayLine": "2. [Route] - 10:56:17 am",
+      "message": "Symptoms matched MSK Spine Pathway criteria. No red flags detected. Patient assigned to MSK Spine Pathway automatically.",
+      "step": "ROUTE",
+      "transition": "ROUTING -> DECISION_PENDING",
+      "actor": "route-worker",
+      "pathway": {
+        "route": "MSK",
+        "confidence": 0.95,
+        "reasoning": "Keyword match - deterministic rules"
+      },
+      "decision": null,
+      "action": null,
+      "adherence": null
     },
-    "decision": {
-      "plan": "PT_FIRST",
-      "expectedCare": "PT referral created"
+    {
+      "index": 3,
+      "label": "Decision",
+      "at": "2026-04-16T07:16:01.433Z",
+      "displayLine": "3. [Decision] - 10:56:17 am",
+      "message": "PT-first pathway selected. Pain score mild (3/10), no red flags, no prior failed PT on record. Telehealth Physical Therapy recommended as first line of care.",
+      "step": "DECISION",
+      "transition": "DECISION_PENDING -> ACTION_PENDING",
+      "actor": "decision-worker",
+      "pathway": {
+        "route": "MSK",
+        "confidence": 0.95,
+        "reasoning": "Keyword match - deterministic rules"
+      },
+      "decision": {
+        "plan": "PT_FIRST",
+        "expectedCare": "PT referral created"
+      },
+      "action": null,
+      "adherence": null
     },
-    "action": {
-      "isAdhered": true,
-      "actualCare": "PT referral created"
+    {
+      "index": 4,
+      "label": "Action",
+      "at": "2026-04-16T07:16:01.438Z",
+      "displayLine": "4. [Action] - 10:56:18 am",
+      "message": "Referral created for City PT Clinic (Telehealth, In-Network). Care navigator notified. Workflow completed. No overrides. Pathway adhered.",
+      "step": "ACTION",
+      "transition": "ACTION_PENDING -> COMPLETED",
+      "actor": "action-worker",
+      "pathway": {
+        "route": "MSK",
+        "confidence": 0.95,
+        "reasoning": "Keyword match - deterministic rules"
+      },
+      "decision": {
+        "plan": "PT_FIRST",
+        "expectedCare": "PT referral created"
+      },
+      "action": {
+        "actualCare": "PT referral created",
+        "completedAt": null
+      },
+      "adherence": {
+        "isAdhered": true,
+        "expectedCare": "PT referral created",
+        "actualCare": "PT referral created"
+      }
     }
-  },
-  "actualCare": "PT referral created",
-  "isAdhered": true,
-  "retryCount": 0,
-  "completedAt": "2026-04-16T07:16:01.436Z",
-  "createdAt": "2026-04-16T07:16:01.381Z",
-  "updatedAt": "2026-04-16T07:16:01.437Z"
-}
-```
-
-### 5.3 Get Governance Logs (readable summary + structured logs)
-
-Request:
-
-```http
-GET /api/v1/workflows/cmo15ay910001umco7wqlhr5j/logs
-```
-
-Response:
-
-```json
-{
-  "summary": "Routed to MSK pathway -> PT_FIRST selected -> PT referral created completed",
-  "logs": [
+  ],
+  "rawLogs": [
     {
       "id": "cmo15aya90007ummou9thness",
       "workflowId": "cmo15ay910001umco7wqlhr5j",
@@ -260,6 +185,173 @@ Response:
       },
       "createdAt": "2026-04-16T07:16:01.438Z"
     }
+
+```json
+{
+  "workflowId": "cmo15ay910001umco7wqlhr5j",
+  "status": "INITIATED"
+}
+```
+
+### 5.2 Get Workflow (UI-ready shape)
+
+Request:
+
+```http
+GET /api/v1/workflows/cmo15ay910001umco7wqlhr5j
+```
+
+Response:
+
+```json
+{
+  "id": "cmo15ay910001umco7wqlhr5j",
+  "traceId": "70f64db8-8f35-4321-bdcd-e97f3495e5ca",
+  "status": "COMPLETED",
+  "input": {
+    "symptom": "lower back pain",
+    "painLevel": 3,
+    "duration": "2 weeks",
+    "redFlags": false,
+    "age": 34,
+    "patientId": "patient_001",
+    "failedPtHistory": null
+  },
+  "pathway": {
+    "route": "MSK",
+    "confidence": 0.95,
+    "reasoning": "Keyword match - deterministic rules"
+  },
+  "decision": {
+    "plan": "PT_FIRST",
+    "expectedCare": "PT referral created"
+  },
+  "action": {
+    "actualCare": "PT referral created",
+    "completedAt": "2026-04-16T07:16:01.436Z"
+  },
+  "adherence": {
+    "isAdhered": true,
+    "expectedCare": "PT referral created",
+    "actualCare": "PT referral created"
+  },
+  "retryCount": 0,
+  "timestamps": {
+    "createdAt": "2026-04-16T07:16:01.381Z",
+    "updatedAt": "2026-04-16T07:16:01.437Z",
+    "completedAt": "2026-04-16T07:16:01.436Z"
+  }
+}
+```
+
+### 5.3 Get Governance Logs (readable summary + timeline)
+
+Request:
+
+```http
+GET /api/v1/workflows/cmo15ay910001umco7wqlhr5j/logs
+```
+
+Response:
+
+```json
+{
+  "workflowId": "cmo15ay910001umco7wqlhr5j",
+  "summary": "Routed to MSK pathway -> PT_FIRST selected -> PT referral created completed",
+  "timeline": [
+    {
+      "id": "cmo15aya90007ummou9thness",
+      "at": "2026-04-16T07:16:01.425Z",
+      "step": "ROUTE",
+      "transition": "ROUTING -> DECISION_PENDING",
+      "fromState": "ROUTING",
+      "toState": "DECISION_PENDING",
+      "actor": "route-worker",
+      "message": "Routed to MSK pathway",
+      "pathway": {
+        "route": "MSK",
+        "confidence": 0.95,
+        "reasoning": "Keyword match - deterministic rules"
+      },
+      "decision": null,
+      "action": null,
+      "adherence": null
+    },
+    {
+  ,
+  "rawLogs": [
+    {
+      "id": "cmo15aya90007ummou9thness",
+      "workflowId": "cmo15ay910001umco7wqlhr5j",
+      "traceId": "70f64db8-8f35-4321-bdcd-e97f3495e5ca",
+      "fromState": "ROUTING",
+      "toState": "DECISION_PENDING",
+      "actor": "route-worker",
+      "narrative": "Routed to MSK pathway",
+      "payloadSnapshot": {
+        "input": {
+          "age": 34,
+          "symptom": "lower back pain",
+          "duration": "2 weeks",
+          "red_flags": false,
+          "pain_level": 3,
+          "patient_id": "patient_001"
+        },
+        "routingDecision": {
+          "route": "MSK",
+          "reasoning": "Keyword match - deterministic rules",
+          "confidence": 0.95
+        }
+      },
+      "createdAt": "2026-04-16T07:16:01.425Z"
+    }
+  ]
+      "id": "cmo15ayag0009ummofxdvpgug",
+      "at": "2026-04-16T07:16:01.433Z",
+      "transition": "DECISION_PENDING -> ACTION_PENDING",
+      "fromState": "DECISION_PENDING",
+      "toState": "ACTION_PENDING",
+      "actor": "decision-worker",
+      "message": "PT_FIRST selected",
+      "pathway": {
+        "route": "MSK",
+        "confidence": 0.95,
+        "reasoning": "Keyword match - deterministic rules"
+      },
+      "decision": {
+        "plan": "PT_FIRST",
+        "expectedCare": "PT referral created"
+      },
+      "action": null,
+      "adherence": null
+    },
+    {
+      "id": "cmo15ayam000bummob32imrei",
+      "at": "2026-04-16T07:16:01.438Z",
+      "transition": "ACTION_PENDING -> COMPLETED",
+      "fromState": "ACTION_PENDING",
+      "toState": "COMPLETED",
+      "actor": "action-worker",
+      "message": "PT referral created completed",
+      "pathway": {
+        "route": "MSK",
+        "confidence": 0.95,
+        "reasoning": "Keyword match - deterministic rules"
+      },
+      "decision": {
+        "plan": "PT_FIRST",
+        "expectedCare": "PT referral created"
+      },
+      "action": {
+        "actualCare": "PT referral created",
+        "completedAt": null
+      },
+      "adherence": {
+        "isAdhered": true,
+        "expectedCare": "PT referral created",
+        "actualCare": "PT referral created"
+      }
+    }
   ]
 }
 ```
@@ -278,17 +370,19 @@ Response shape:
 [
   {
     "id": "...",
-    "idempotencyKey": "...",
+    "traceId": "...",
     "status": "COMPLETED",
-    "contextData": {
-      "input": {},
-      "routingDecision": {},
-      "decision": {},
-      "action": {}
-    },
-    "actualCare": "...",
-    "isAdhered": true,
-    "completedAt": "..."
+    "input": {},
+    "pathway": {},
+    "decision": {},
+    "action": {},
+    "adherence": {},
+    "retryCount": 0,
+    "timestamps": {
+      "createdAt": "...",
+      "updatedAt": "...",
+      "completedAt": "..."
+    }
   }
 ]
 ```
@@ -298,7 +392,8 @@ Response shape:
 - API and DB stay consistent through repository-backed persistence.
 - `idempotencyKey` prevents duplicate workflow creation for repeated create requests.
 - `traceId` links one workflow across all governance entries.
-- `contextData` and `payloadSnapshot` are returned in a normalized readable order.
+- API response shape is UI-ready with explicit `pathway`, `decision`, `action`, and `adherence` fields.
+- Governance logs are returned as a readable timeline plus raw log detail for drill-down.
 
 ## 7. Out of Scope (intentionally not included)
 
