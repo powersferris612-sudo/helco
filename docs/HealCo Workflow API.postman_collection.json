@@ -1,0 +1,176 @@
+
+{
+  "info": {
+    "_postman_id": "5a5f86ef-3f3d-4d32-a7d3-8d67b1a3f5e1",
+    "name": "HealCo Workflow API",
+    "description": "Collection for testing the HealCo workflow API endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "Check server availability."
+      },
+      "response": []
+    },
+    {
+      "name": "Create Workflow - MSK Happy Path",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"idempotencyKey\": \"{{idempotencyKey}}\",\n  \"payload\": {\n    \"symptom\": \"lower back pain\",\n    \"pain_level\": 3,\n    \"duration\": \"2 weeks\",\n    \"red_flags\": false,\n    \"age\": 34,\n    \"patient_id\": \"patient_001\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/workflows",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "workflows"]
+        },
+        "description": "Creates a workflow using the MSK happy-path payload.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.response.code === 202) {",
+              "  const json = pm.response.json();",
+              "  if (json.workflow_id) {",
+              "    pm.collectionVariables.set('workflowId', json.workflow_id);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ],
+      "response": []
+    },
+    {
+      "name": "Get Workflow",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/workflows/{{workflowId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "workflows", "{{workflowId}}"]
+        },
+        "description": "Fetches the current workflow record.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Workflow Logs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/workflows/{{workflowId}}/logs",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "workflows", "{{workflowId}}", "logs"]
+        },
+        "description": "Fetches governance logs and summary for the selected workflow.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Completed Workflows",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/workflows?status=COMPLETED&limit=20&offset=0",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "workflows"],
+          "query": [
+            {
+              "key": "status",
+              "value": "COMPLETED"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        },
+        "description": "Lists completed workflows for demo validation.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Workflow - Validation Failure",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"idempotencyKey\": \"{{badIdempotencyKey}}\",\n  \"payload\": {\n    \"symptom\": \"\",\n    \"pain_level\": 12,\n    \"duration\": \"2 weeks\",\n    \"red_flags\": false,\n    \"age\": -1,\n    \"patient_id\": \"patient_002\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/workflows",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "workflows"]
+        },
+        "description": "Submits an invalid payload to verify validation behavior.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8001"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "validate_001"
+    },
+    {
+      "key": "badIdempotencyKey",
+      "value": "bad_001"
+    },
+    {
+      "key": "workflowId",
+      "value": ""
+    }
+  ]
+}

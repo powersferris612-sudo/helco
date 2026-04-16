@@ -1,0 +1,49 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkflowStatus {
+  INITIATED
+  ROUTING
+  DECISION_PENDING
+  ACTION_PENDING
+  COMPLETED
+  FAILED
+}
+
+model WorkflowRecord {
+  id             String           @id @default(cuid())
+  idempotencyKey  String           @unique
+  traceId         String
+  status          WorkflowStatus   @default(INITIATED)
+  contextData     Json
+  actualCare      String?
+  isAdhered       Boolean?
+  retryCount      Int              @default(0)
+  completedAt     DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  governanceLogs  GovernanceLog[]
+
+  @@index([status, createdAt])
+}
+
+model GovernanceLog {
+  id              String         @id @default(cuid())
+  workflowId      String
+  traceId         String
+  fromState       WorkflowStatus
+  toState         WorkflowStatus
+  actor           String
+  narrative       String
+  payloadSnapshot Json
+  createdAt       DateTime       @default(now())
+  workflow        WorkflowRecord @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId, createdAt])
+}

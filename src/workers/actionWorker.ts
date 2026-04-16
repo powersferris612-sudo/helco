@@ -1,0 +1,40 @@
+import { WorkflowStatus, WorkflowContext } from '../core/workflow-state';
+import { WorkflowRepository } from '../repositories/workflow.repository';
+import { logTransition } from '../services/governance.service';
+
+const repo = new WorkflowRepository();
+
+export async function actionWorker(workflowId: string) {
+  const workflow = await repo.findById(workflowId);
+  if (!workflow) throw new Error(`Workflow ${workflowId} not found`);
+
+  const context = workflow.contextData as Record<string, unknown>;
+  const decision = context.decision as { expectedCare?: string; plan?: string } | undefined;
+
+  if (!decision?.expectedCare) {
+    throw new Error(`Workflow ${workflowId} is missing decision context`);
+  }
+
+  const actualCare = decision.expectedCare;
+  const isAdhered = actualCare === decision.expectedCare;
+
+  const updatedContext: WorkflowContext = {
+    ...context,
+    action: {
+      actualCare,
+      isAdhered
+    }
+  };
+
+  await repo.markCompleted(workflowId, actualCare, isAdhered, updatedContext);
+
+  await logTransition({
+    workflowId,
+    traceId: workflow.traceId,
+    fromState: WorkflowStatus.ACTION_PENDING,
+    toState: WorkflowStatus.COMPLETED,
+    actor: 'action-worker',
+    narrative: `${actualCare} completed`,
+    payloadSnapshot: updatedContext
+  });
+}
