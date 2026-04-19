@@ -9,4 +9,68 @@ export const WorkflowStatus = {
 
 export type WorkflowStatus = (typeof WorkflowStatus)[keyof typeof WorkflowStatus];
 
-export type WorkflowContext = Record<string, unknown>;
+export const GovernanceStep = {
+  INTAKE: 'INTAKE',
+  ROUTE: 'ROUTE',
+  DECISION: 'DECISION',
+  ACTION: 'ACTION',
+  FAILURE: 'FAILURE',
+  EVENT: 'EVENT'
+} as const;
+
+export type GovernanceStep = (typeof GovernanceStep)[keyof typeof GovernanceStep];
+
+export type WorkflowInput = {
+  symptom: string;
+  painLevel: number;
+  duration: string;
+  redFlags: boolean;
+  age: number;
+  patientId: string;
+  failedPtHistory?: boolean;
+};
+
+export type WorkflowPathway = {
+  route: string;
+  confidence: number;
+  reasoning: string;
+};
+
+export type WorkflowDecision = {
+  plan: string;
+  expectedCare: string;
+  rationale: {
+    selectedBecause: string[];
+    factors: {
+      route: string;
+      painLevel: number;
+      redFlags: boolean;
+      failedPtHistory: boolean;
+    };
+  };
+  alternatives: Array<{
+    plan: string;
+    expectedCare: string;
+    ranking: number;
+    selected: boolean;
+    notSelectedReason: string | null;
+  }>;
+  comparison: {
+    compared: boolean;
+    methodology: string;
+    notes: string;
+  };
+};
+
+export type WorkflowAction = {
+  actualCare: string;
+  isAdhered: boolean;
+};
+
+export type WorkflowContext = {
+  input?: WorkflowInput;
+  pathway?: WorkflowPathway;
+  decision?: WorkflowDecision;
+  action?: WorkflowAction;
+  [key: string]: unknown;
+};

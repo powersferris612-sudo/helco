@@ -37,11 +37,13 @@ worker.on('failed', async (_job, error) => {
   await logTransition({
     workflowId,
     traceId: workflow.traceId,
+    step: 'FAILURE',
     fromState: workflow.status as WorkflowStatus,
     toState: WorkflowStatus.FAILED,
     actor: 'processor',
+    title: 'Processing Failed',
     narrative: error.message,
-    payloadSnapshot: workflow.contextData as object
+    payloadSnapshot: workflow.contextData as Record<string, unknown>
   });
 });
 

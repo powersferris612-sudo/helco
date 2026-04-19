@@ -12,14 +12,15 @@ export async function routeWorker(workflowId: string) {
   const context = workflow.contextData as Record<string, unknown>;
   const input = (context.input as { symptom?: string } | undefined) ?? {};
   const route = classifySymptom(String(input.symptom ?? ''));
+  const pathway = {
+    route,
+    confidence: 0.95,
+    reasoning: 'Keyword match - deterministic rules'
+  };
 
   const updatedContext: WorkflowContext = {
     ...context,
-    routingDecision: {
-      route,
-      confidence: 0.95,
-      reasoning: 'Keyword match - deterministic rules'
-    }
+    pathway
   };
 
   await repo.updateStatus(workflowId, WorkflowStatus.DECISION_PENDING, updatedContext);
@@ -27,11 +28,14 @@ export async function routeWorker(workflowId: string) {
   await logTransition({
     workflowId,
     traceId: workflow.traceId,
+    step: 'ROUTE',
     fromState: WorkflowStatus.ROUTING,
     toState: WorkflowStatus.DECISION_PENDING,
     actor: 'route-worker',
+    title: `${route} Routing Complete`,
     narrative: `Routed to ${route} pathway because symptom keyword mapping matched deterministic rules (confidence 0.95)`,
-    payloadSnapshot: updatedContext
+    routingDecision: pathway as Record<string, unknown>,
+    payloadSnapshot: updatedContext as Record<string, unknown>
   });
 
   await workflowQueue.add('process-workflow', { workflowId, step: 'decision' });

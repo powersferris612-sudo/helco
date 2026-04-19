@@ -1,12 +1,12 @@
-import { PrismaClient } from '@prisma/client';
-import { WorkflowStatus } from './workflow-state';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { GovernanceStep, WorkflowStatus } from './workflow-state';
 
 type WorkflowRow = {
   id: string;
   idempotencyKey: string;
   traceId: string;
   status: WorkflowStatus;
-  contextData: Record<string, unknown>;
+  contextData: Prisma.InputJsonValue;
   actualCare: string | null;
   isAdhered: boolean | null;
   retryCount: number;
@@ -19,11 +19,18 @@ type GovernanceRow = {
   id: string;
   workflowId: string;
   traceId: string;
+  step: GovernanceStep;
   fromState: WorkflowStatus;
   toState: WorkflowStatus;
   actor: string;
+  title: string;
   narrative: string;
-  payloadSnapshot: Record<string, unknown>;
+  message: string;
+  routingDecision: Prisma.InputJsonValue | null;
+  decisionMade: Prisma.InputJsonValue | null;
+  actionTaken: Prisma.InputJsonValue | null;
+  adherenceResult: Prisma.InputJsonValue | null;
+  payloadSnapshot: Prisma.InputJsonValue;
   createdAt: Date;
 };
 
@@ -54,7 +61,7 @@ function buildWorkflowRecordApi() {
 
       return null;
     },
-    async create({ data }: { data: { idempotencyKey: string; traceId: string; status: WorkflowStatus; contextData: Record<string, unknown> } }) {
+    async create({ data }: { data: { idempotencyKey: string; traceId: string; status: WorkflowStatus; contextData: Prisma.InputJsonValue } }) {
       const now = new Date();
       const id = `wf_${workflowRows.size + 1}`;
       const row: WorkflowRow = {
@@ -75,7 +82,7 @@ function buildWorkflowRecordApi() {
       workflowKeyIndex.set(data.idempotencyKey, id);
       return clone(row);
     },
-    async update({ where, data }: { where: { id: string }; data: Partial<WorkflowRow> & { retryCount?: { increment: number } } }) {
+    async update({ where, data }: { where: { id: string }; data: Omit<Partial<WorkflowRow>, 'retryCount'> & { retryCount?: { increment: number } } }) {
       const row = workflowRows.get(where.id);
       if (!row) {
         throw new Error(`Workflow ${where.id} not found`);
@@ -103,15 +110,41 @@ function buildWorkflowRecordApi() {
 
 function buildGovernanceLogApi() {
   return {
-    async create({ data }: { data: { workflowId: string; traceId: string; fromState: WorkflowStatus; toState: WorkflowStatus; actor: string; narrative: string; payloadSnapshot: Record<string, unknown> } }) {
+    async create({
+      data
+    }: {
+      data: {
+        workflowId: string;
+        traceId: string;
+        step: GovernanceStep;
+        fromState: WorkflowStatus;
+        toState: WorkflowStatus;
+        actor: string;
+        title: string;
+        narrative: string;
+        message: string;
+        routingDecision?: Prisma.InputJsonValue;
+        decisionMade?: Prisma.InputJsonValue;
+        actionTaken?: Prisma.InputJsonValue;
+        adherenceResult?: Prisma.InputJsonValue;
+        payloadSnapshot: Prisma.InputJsonValue;
+      };
+    }) {
       const row: GovernanceRow = {
         id: `gl_${governanceRows.length + 1}`,
         workflowId: data.workflowId,
         traceId: data.traceId,
+        step: data.step,
         fromState: data.fromState,
         toState: data.toState,
         actor: data.actor,
+        title: data.title,
         narrative: data.narrative,
+        message: data.message,
+        routingDecision: data.routingDecision ?? null,
+        decisionMade: data.decisionMade ?? null,
+        actionTaken: data.actionTaken ?? null,
+        adherenceResult: data.adherenceResult ?? null,
         payloadSnapshot: clone(data.payloadSnapshot),
         createdAt: new Date()
       };

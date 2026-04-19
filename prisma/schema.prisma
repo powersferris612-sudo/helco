@@ -37,13 +37,22 @@ model GovernanceLog {
   id              String         @id @default(cuid())
   workflowId      String
   traceId         String
+  step            String
   fromState       WorkflowStatus
   toState         WorkflowStatus
   actor           String
+  title           String
   narrative       String
+  message         String
+  routingDecision Json?
+  decisionMade    Json?
+  actionTaken     Json?
+  adherenceResult Json?
   payloadSnapshot Json
   createdAt       DateTime       @default(now())
   workflow        WorkflowRecord @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   @@index([workflowId, createdAt])
+  @@index([step, createdAt])
+  @@index([workflowId, step])
 }

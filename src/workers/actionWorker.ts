@@ -31,10 +31,20 @@ export async function actionWorker(workflowId: string) {
   await logTransition({
     workflowId,
     traceId: workflow.traceId,
+    step: 'ACTION',
     fromState: WorkflowStatus.ACTION_PENDING,
     toState: WorkflowStatus.COMPLETED,
     actor: 'action-worker',
+    title: 'Action Completed',
     narrative: `${actualCare} completed`,
-    payloadSnapshot: updatedContext
+    actionTaken: {
+      actualCare
+    } as Record<string, unknown>,
+    adherenceResult: {
+      isAdhered,
+      expectedCare: decision.expectedCare,
+      actualCare
+    } as Record<string, unknown>,
+    payloadSnapshot: updatedContext as Record<string, unknown>
   });
 }

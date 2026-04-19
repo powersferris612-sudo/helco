@@ -1,13 +1,13 @@
 import { v4 as uuid } from 'uuid';
 import { workflowQueue } from '../core/queue';
-import { WorkflowStatus, WorkflowContext } from '../core/workflow-state';
+import { WorkflowStatus, WorkflowContext, WorkflowInput } from '../core/workflow-state';
 import { WorkflowRepository } from '../repositories/workflow.repository';
 
 const repo = new WorkflowRepository();
 
 export async function startWorkflow(input: {
   idempotencyKey: string;
-  payload: object;
+  payload: WorkflowInput;
 }) {
   const existing = await repo.findByIdempotencyKey(input.idempotencyKey);
   if (existing) return existing;

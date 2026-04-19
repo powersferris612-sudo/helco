@@ -11,18 +11,18 @@ export async function decisionWorker(workflowId: string) {
 
   const context = workflow.contextData as Record<string, unknown>;
   const input = (context.input as {
-    pain_level?: number;
-    red_flags?: boolean;
+    painLevel?: number;
+    redFlags?: boolean;
     symptom?: string;
-    failed_pt_history?: boolean;
+    failedPtHistory?: boolean;
   } | undefined) ?? {};
-  const routingDecision = context.routingDecision as { route?: string } | undefined;
+  const pathway = context.pathway as { route?: string } | undefined;
 
   const plan = decidePlan({
-    route: routingDecision?.route ?? 'GENERAL',
-    painLevel: Number(input.pain_level ?? 0),
-    redFlags: Boolean(input.red_flags),
-    failedPtHistory: Boolean(input.failed_pt_history)
+    route: pathway?.route ?? 'GENERAL',
+    painLevel: Number(input.painLevel ?? 0),
+    redFlags: Boolean(input.redFlags),
+    failedPtHistory: Boolean(input.failedPtHistory)
   });
 
   const updatedContext: WorkflowContext = {
@@ -35,11 +35,14 @@ export async function decisionWorker(workflowId: string) {
   await logTransition({
     workflowId,
     traceId: workflow.traceId,
+    step: 'DECISION',
     fromState: WorkflowStatus.DECISION_PENDING,
     toState: WorkflowStatus.ACTION_PENDING,
     actor: 'decision-worker',
+    title: `${String(plan.plan)} Selected`,
     narrative: buildDecisionNarrative(plan),
-    payloadSnapshot: updatedContext
+    decisionMade: plan as Record<string, unknown>,
+    payloadSnapshot: updatedContext as Record<string, unknown>
   });
 
   await workflowQueue.add('process-workflow', { workflowId, step: 'action' });

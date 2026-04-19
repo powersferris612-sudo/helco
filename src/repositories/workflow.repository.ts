@@ -1,4 +1,5 @@
 import { prisma } from '../core/db';
+import { Prisma } from '@prisma/client';
 import { WorkflowStatus, WorkflowContext } from '../core/workflow-state';
 
 export class WorkflowRepository {
@@ -16,13 +17,18 @@ export class WorkflowRepository {
     status: WorkflowStatus;
     contextData: WorkflowContext;
   }) {
-    return prisma.workflowRecord.create({ data });
+    return prisma.workflowRecord.create({
+      data: {
+        ...data,
+        contextData: data.contextData as Prisma.InputJsonValue
+      }
+    });
   }
 
   async updateStatus(id: string, status: WorkflowStatus, contextData: WorkflowContext) {
     return prisma.workflowRecord.update({
       where: { id },
-      data: { status, contextData, updatedAt: new Date() }
+      data: { status, contextData: contextData as Prisma.InputJsonValue, updatedAt: new Date() }
     });
   }
 
@@ -38,7 +44,7 @@ export class WorkflowRepository {
         status: WorkflowStatus.COMPLETED,
         actualCare,
         isAdhered,
-        contextData,
+        contextData: contextData as Prisma.InputJsonValue,
         completedAt: new Date()
       }
     });

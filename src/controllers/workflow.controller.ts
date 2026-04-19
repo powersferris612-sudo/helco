@@ -7,12 +7,12 @@ const createSchema = z.object({
   idempotencyKey: z.string().min(1),
   payload: z.object({
     symptom: z.string(),
-    pain_level: z.number().min(0).max(10),
+    painLevel: z.number().min(0).max(10),
     duration: z.string(),
-    red_flags: z.boolean(),
+    redFlags: z.boolean(),
     age: z.number().positive(),
-    patient_id: z.string(),
-    failed_pt_history: z.boolean().optional()
+    patientId: z.string(),
+    failedPtHistory: z.boolean().optional()
   })
 });
 
@@ -60,12 +60,13 @@ function mapWorkflowInput(context: Record<string, unknown>) {
 
   return {
     symptom: toStringValue(input.symptom) ?? null,
-    painLevel: toNumberValue(input.pain_level) ?? null,
+    painLevel: toNumberValue(input.painLevel) ?? toNumberValue(input.pain_level) ?? null,
     duration: toStringValue(input.duration) ?? null,
-    redFlags: toBooleanValue(input.red_flags) ?? null,
+    redFlags: toBooleanValue(input.redFlags) ?? toBooleanValue(input.red_flags) ?? null,
     age: toNumberValue(input.age) ?? null,
-    patientId: toStringValue(input.patient_id) ?? null,
-    failedPtHistory: toBooleanValue(input.failed_pt_history) ?? null
+    patientId: toStringValue(input.patientId) ?? toStringValue(input.patient_id) ?? null,
+    failedPtHistory:
+      toBooleanValue(input.failedPtHistory) ?? toBooleanValue(input.failed_pt_history) ?? null
   };
 }
 
@@ -118,8 +119,11 @@ function buildRouteMessage(
   pathway: ReturnType<typeof mapPathway>
 ) {
   const routeLabel = getPathwayLabel(pathway?.route ?? null);
-  const symptomText = input?.symptom ? `Symptoms matched ${routeLabel} criteria.` : 'Symptoms matched pathway criteria.';
-  const redFlagText = input?.redFlags === false ? 'No red flags detected.' : 'Routing reviewed for red flags.';
+  const symptomText = input?.symptom
+    ? `Symptoms matched ${routeLabel} criteria.`
+    : 'Symptoms matched pathway criteria.';
+  const redFlagText =
+    input?.redFlags === false ? 'No red flags detected.' : 'Routing reviewed for red flags.';
 
   return `${symptomText} ${redFlagText} Patient assigned to ${routeLabel} automatically.`;
 }
@@ -177,7 +181,12 @@ function buildActionMessage(
   return `Referral created for ${referralTarget} (${careSetting}). Care navigator notified. Workflow completed. No overrides. ${adherenceText}`;
 }
 
-function inferLogLabel(fromState: unknown, toState: unknown) {
+function inferLogLabel(fromState: unknown, toState: unknown, title: unknown) {
+  const explicitTitle = toStringValue(title);
+  if (explicitTitle) {
+    return explicitTitle;
+  }
+
   const from = toStringValue(fromState);
   const to = toStringValue(toState);
 
@@ -325,9 +334,14 @@ function normalizeWorkflowResponse(
   };
 }
 
-function inferLogStep(fromState: unknown, toState: unknown) {
-  const from = toStringValue(fromState);
-  const to = toStringValue(toState);
+function inferLogStep(log: Record<string, unknown>) {
+  const explicitStep = toStringValue(log.step);
+  if (explicitStep) {
+    return explicitStep;
+  }
+
+  const from = toStringValue(log.fromState);
+  const to = toStringValue(log.toState);
 
   if (from === 'ROUTING' && to === 'DECISION_PENDING') return 'ROUTE';
   if (from === 'DECISION_PENDING' && to === 'ACTION_PENDING') return 'DECISION';
@@ -376,45 +390,69 @@ function normalizeWorkflowLogsResponse(result: {
     },
     ...result.logs.map((log, offset) => {
       const snapshot = asRecord(log.payloadSnapshot) ?? {};
-      const label = inferLogLabel(log.fromState, log.toState);
-      const step = inferLogStep(log.fromState, log.toState);
+      const label = inferLogLabel(log.fromState, log.toState, log.title);
+      const step = inferLogStep(log);
       const index = offset + 2;
       const createdAt = toDateValue(log.createdAt);
+
+      const storedRoutingDecision = asRecord(log.routingDecision);
+      const storedDecision = asRecord(log.decisionMade);
+      const storedAction = asRecord(log.actionTaken);
+      const storedAdherence = asRecord(log.adherenceResult);
+
       const snapshotInput = mapWorkflowInput(snapshot) ?? input;
-      const snapshotPathway = mapPathway(snapshot) ?? pathway;
-      const snapshotDecision = mapDecision(snapshot) ?? decision;
-      const snapshotAction = mapAction(snapshot, {
-        actualCare: result.workflow.actualCare,
-        completedAt: null
-      });
-      const snapshotAdherence = mapAdherence(snapshot, {
-        isAdhered: result.workflow.isAdhered,
-        actualCare: result.workflow.actualCare
-      });
+      const snapshotPathway =
+        (storedRoutingDecision ? mapPathway({ pathway: storedRoutingDecision }) : null) ??
+        mapPathway(snapshot) ??
+        pathway;
+      const snapshotDecision =
+        (storedDecision ? mapDecision({ decision: storedDecision }) : null) ?? mapDecision(snapshot) ?? decision;
+      const snapshotAction =
+        (storedAction ? mapAction({ action: storedAction }, { actualCare: result.workflow.actualCare, completedAt: null }) : null) ??
+        mapAction(snapshot, {
+          actualCare: result.workflow.actualCare,
+          completedAt: null
+        }) ??
+        action;
+      const snapshotAdherence =
+        (storedAdherence
+          ? {
+              isAdhered: toBooleanValue(storedAdherence.isAdhered) ?? null,
+              expectedCare: toStringValue(storedAdherence.expectedCare) ?? null,
+              actualCare: toStringValue(storedAdherence.actualCare) ?? null
+            }
+          : null) ??
+        mapAdherence(snapshot, {
+          isAdhered: result.workflow.isAdhered,
+          actualCare: result.workflow.actualCare
+        }) ??
+        adherence;
+
+      const fallbackMessage =
+        step === 'ROUTE'
+          ? buildRouteMessage(snapshotInput, snapshotPathway)
+          : step === 'DECISION'
+            ? buildDecisionMessage(snapshotInput, snapshotDecision)
+            : step === 'ACTION'
+              ? buildActionMessage(
+                  {
+                    actualCare: result.workflow.actualCare,
+                    isAdhered: result.workflow.isAdhered
+                  },
+                  snapshotDecision,
+                  snapshotPathway
+                )
+              : toStringValue(log.narrative) ?? 'Workflow event recorded.';
 
       return {
         index,
         label,
         at: createdAt,
         displayLine: buildTimelineDisplayLine(index, label, createdAt),
-        message:
-          step === 'ROUTE'
-            ? buildRouteMessage(snapshotInput, snapshotPathway)
-            : step === 'DECISION'
-              ? buildDecisionMessage(snapshotInput, snapshotDecision)
-              : step === 'ACTION'
-                ? buildActionMessage(
-                    {
-                      actualCare: result.workflow.actualCare,
-                      isAdhered: result.workflow.isAdhered
-                    },
-                    snapshotDecision,
-                    snapshotPathway
-                  )
-                : log.narrative,
+        message: toStringValue(log.message) ?? fallbackMessage,
         step,
         transition: `${String(log.fromState)} -> ${String(log.toState)}`,
-        actor: log.actor,
+        actor: toStringValue(log.actor) ?? 'system',
         pathway: snapshotPathway,
         decision: snapshotDecision,
         action: snapshotAction,
@@ -430,11 +468,18 @@ function normalizeWorkflowLogsResponse(result: {
       id: log.id,
       workflowId: log.workflowId,
       traceId: log.traceId,
+      step: toStringValue(log.step) ?? inferLogStep(log),
+      title: toStringValue(log.title) ?? inferLogLabel(log.fromState, log.toState, log.title),
       fromState: log.fromState,
       toState: log.toState,
       actor: log.actor,
       narrative: log.narrative,
+      message: toStringValue(log.message) ?? null,
       payloadSnapshot: log.payloadSnapshot,
+      routingDecision: asRecord(log.routingDecision) ?? null,
+      decisionMade: asRecord(log.decisionMade) ?? null,
+      actionTaken: asRecord(log.actionTaken) ?? null,
+      adherenceResult: asRecord(log.adherenceResult) ?? null,
       pathway: mapPathway(snapshot),
       decision: mapDecision(snapshot),
       createdAt: log.createdAt
