@@ -350,6 +350,21 @@ function inferLogStep(log: Record<string, unknown>) {
   return 'EVENT';
 }
 
+function parseIncludeQuery(value: unknown) {
+  if (typeof value !== 'string') {
+    return { hasIncludeQuery: false, includes: new Set<string>() };
+  }
+
+  const includes = new Set(
+    value
+      .split(',')
+      .map((item) => item.trim().toLowerCase())
+      .filter((item) => item.length > 0)
+  );
+
+  return { hasIncludeQuery: true, includes };
+}
+
 function normalizeWorkflowLogsResponse(result: {
   summary: string;
   logs: Array<Record<string, unknown>>;
@@ -358,6 +373,7 @@ function normalizeWorkflowLogsResponse(result: {
     contextData: unknown;
     actualCare: string | null;
     isAdhered: boolean | null;
+    completedAt: Date | null;
   };
 }) {
   const workflowContext = asRecord(result.workflow.contextData) ?? {};
@@ -366,7 +382,7 @@ function normalizeWorkflowLogsResponse(result: {
   const decision = mapDecision(workflowContext);
   const action = mapAction(workflowContext, {
     actualCare: result.workflow.actualCare,
-    completedAt: null
+    completedAt: result.workflow.completedAt
   });
   const adherence = mapAdherence(workflowContext, {
     isAdhered: result.workflow.isAdhered,
@@ -406,14 +422,24 @@ function normalizeWorkflowLogsResponse(result: {
         mapPathway(snapshot) ??
         pathway;
       const snapshotDecision =
-        (storedDecision ? mapDecision({ decision: storedDecision }) : null) ?? mapDecision(snapshot) ?? decision;
+        (storedDecision ? mapDecision({ decision: storedDecision }) : null) ??
+        mapDecision(snapshot) ??
+        decision;
       const snapshotAction =
-        (storedAction ? mapAction({ action: storedAction }, { actualCare: result.workflow.actualCare, completedAt: null }) : null) ??
+        (storedAction
+          ? mapAction(
+              { action: storedAction },
+              {
+                actualCare: result.workflow.actualCare,
+                completedAt: step === 'ACTION' ? result.workflow.completedAt : null
+              }
+            )
+          : null) ??
         mapAction(snapshot, {
-          actualCare: result.workflow.actualCare,
-          completedAt: null
+          actualCare: step === 'ACTION' ? result.workflow.actualCare : null,
+          completedAt: step === 'ACTION' ? result.workflow.completedAt : null
         }) ??
-        action;
+        null;
       const snapshotAdherence =
         (storedAdherence
           ? {
@@ -423,10 +449,14 @@ function normalizeWorkflowLogsResponse(result: {
             }
           : null) ??
         mapAdherence(snapshot, {
-          isAdhered: result.workflow.isAdhered,
-          actualCare: result.workflow.actualCare
+          isAdhered: step === 'ACTION' ? result.workflow.isAdhered : null,
+          actualCare: step === 'ACTION' ? result.workflow.actualCare : null
         }) ??
-        adherence;
+        null;
+
+      const timelineDecision = step === 'DECISION' || step === 'ACTION' ? snapshotDecision : null;
+      const timelineAction = step === 'ACTION' ? snapshotAction : null;
+      const timelineAdherence = step === 'ACTION' ? snapshotAdherence : null;
 
       const fallbackMessage =
         step === 'ROUTE'
@@ -454,12 +484,26 @@ function normalizeWorkflowLogsResponse(result: {
         transition: `${String(log.fromState)} -> ${String(log.toState)}`,
         actor: toStringValue(log.actor) ?? 'system',
         pathway: snapshotPathway,
-        decision: snapshotDecision,
-        action: snapshotAction,
-        adherence: snapshotAdherence
+        decision: timelineDecision,
+        action: timelineAction,
+        adherence: timelineAdherence
       };
     })
   ];
+
+  // logs is a compact projection of timeline and must stay index/order aligned.
+  const logs = timeline.map((entry) => ({
+    index: entry.index,
+    at: entry.at,
+    step: entry.step,
+    transition: entry.transition,
+    actor: entry.actor,
+    message: entry.message,
+    route: entry.pathway?.route ?? null,
+    plan: entry.decision?.plan ?? null,
+    actualCare: entry.action?.actualCare ?? null,
+    isAdhered: entry.adherence?.isAdhered ?? null
+  }));
 
   const rawLogs = result.logs.map((log) => {
     const snapshot = asRecord(log.payloadSnapshot) ?? {};
@@ -489,8 +533,31 @@ function normalizeWorkflowLogsResponse(result: {
   return {
     summary: result.summary,
     timeline,
-    logs: timeline,
+    logs,
     rawLogs,
+    sections: {
+      timeline: {
+        role: 'primary-rich',
+        description: 'Human-readable, detailed timeline for UI and audit playback.'
+      },
+      logs: {
+        role: 'compact-aligned',
+        description: 'Compact projection of timeline for table/list rendering.',
+        alignment: {
+          with: 'timeline',
+          guaranteed: true,
+          fields: ['index', 'step', 'transition', 'actor', 'message']
+        }
+      },
+      rawLogs: {
+        role: 'audit-debug',
+        description: 'Raw transition records with payload snapshots for diagnostics.'
+      },
+      overview: {
+        role: 'final-state',
+        description: 'Final aggregate snapshot of input, pathway, decision, action, and adherence.'
+      }
+    },
     overview: {
       input,
       pathway,
@@ -521,18 +588,35 @@ export async function getWorkflowLogs(req: Request, res: Response) {
   const workflow = await workflowService.getWorkflowById(String(req.params.id));
   if (!workflow) return res.status(404).json({ error: 'not found' });
 
+  const includeQuery = parseIncludeQuery(req.query.include);
+  const includeRaw = includeQuery.includes.has('raw');
+
   const result = await governanceService.getLogsWithSummary(String(req.params.id));
+  const normalized = normalizeWorkflowLogsResponse({
+    ...result,
+    workflow: {
+      createdAt: workflow.createdAt,
+      contextData: workflow.contextData,
+      actualCare: workflow.actualCare,
+      isAdhered: workflow.isAdhered,
+      completedAt: workflow.completedAt
+    }
+  });
+
+  const { rawLogs, ...baseResponse } = normalized;
+
   return res.json({
     workflowId: String(req.params.id),
-    ...normalizeWorkflowLogsResponse({
-      ...result,
-      workflow: {
-        createdAt: workflow.createdAt,
-        contextData: workflow.contextData,
-        actualCare: workflow.actualCare,
-        isAdhered: workflow.isAdhered
+    ...baseResponse,
+    ...(includeRaw ? { rawLogs } : {}),
+    responseMeta: {
+      includeQuery: req.query.include ?? null,
+      rawLogs: {
+        included: includeRaw,
+        query: 'include=raw',
+        note: 'rawLogs are excluded by default and returned only when include=raw is requested.'
       }
-    })
+    }
   });
 }
 

@@ -8,6 +8,77 @@
 }
 ```
 
+## GET /api/v1/workflows?status=COMPLETED&limit=20&offset=0
+
+```json
+[
+  {
+    "id": "cmo4dl4vy0002umk09iw9uuxq",
+    "traceId": "f0abf7d1-fedc-4498-a68b-dc1d787327a1",
+    "status": "COMPLETED",
+    "input": {
+      "symptom": "lower back pain",
+      "painLevel": 3,
+      "duration": "2 weeks",
+      "redFlags": false,
+      "age": 34,
+      "patientId": "patient_001",
+      "failedPtHistory": false
+    },
+    "pathway": {
+      "route": "MSK",
+      "confidence": 0.95,
+      "reasoning": "Keyword match - deterministic rules"
+    },
+    "decision": {
+      "plan": "PT_FIRST",
+      "expectedCare": "PT referral created",
+      "rationale": {
+        "selectedBecause": [
+          "Pain score is mild to moderate and no red flags are present.",
+          "No prior failed PT history is recorded, so conservative care is first-line."
+        ],
+        "factors": {
+          "route": "MSK",
+          "painLevel": 3,
+          "redFlags": false,
+          "failedPtHistory": false
+        }
+      },
+      "alternatives": [
+        {
+          "plan": "IMAGING_FIRST",
+          "expectedCare": "Imaging referral created",
+          "ranking": 2,
+          "selected": false,
+          "notSelectedReason": "Not selected because no red flags and no high pain threshold trigger were found."
+        }
+      ],
+      "comparison": {
+        "compared": true,
+        "methodology": "rules-v1",
+        "notes": "Structured for future weighted scoring and side-by-side strategy comparison."
+      }
+    },
+    "action": {
+      "actualCare": "PT referral created",
+      "completedAt": "2026-04-18T13:31:12.912Z"
+    },
+    "adherence": {
+      "isAdhered": true,
+      "expectedCare": "PT referral created",
+      "actualCare": "PT referral created"
+    },
+    "retryCount": 0,
+    "timestamps": {
+      "createdAt": "2026-04-18T13:31:11.998Z",
+      "updatedAt": "2026-04-18T13:31:12.913Z",
+      "completedAt": "2026-04-18T13:31:12.912Z"
+    }
+  }
+]
+```
+
 ## POST /api/v1/workflows
 
 Request body:
@@ -105,6 +176,19 @@ Request body:
 
 ## GET /api/v1/workflows/:id/logs
 
+Response sections are intentionally differentiated:
+
+- `timeline`: rich, human-readable event feed (UI-first view).
+- `logs`: compact projection aligned to `timeline` by index and step.
+- `rawLogs`: raw transition records for audit/debug only.
+- `overview`: final aggregate snapshot.
+
+Raw logs query behavior:
+
+- Default (no `include` query): excludes `rawLogs`.
+- `?include=timeline,logs,overview`: excludes `rawLogs`.
+- `?include=raw`: explicitly includes `rawLogs`.
+
 ```json
 {
   "workflowId": "cmo4dic970004umj0yibkjq51",
@@ -142,52 +226,16 @@ Request body:
         "confidence": 0.95,
         "reasoning": "Keyword match - deterministic rules"
       },
-      "decision": {
-        "plan": "PT_FIRST",
-        "expectedCare": "PT referral created",
-        "rationale": {
-          "selectedBecause": [
-            "Pain score is mild to moderate and no red flags are present.",
-            "No prior failed PT history is recorded, so conservative care is first-line."
-          ],
-          "factors": {
-            "route": "MSK",
-            "painLevel": 3,
-            "redFlags": false,
-            "failedPtHistory": false
-          }
-        },
-        "alternatives": [
-          {
-            "plan": "IMAGING_FIRST",
-            "expectedCare": "Imaging referral created",
-            "ranking": 2,
-            "selected": false,
-            "notSelectedReason": "Not selected because no red flags and no high pain threshold trigger were found."
-          }
-        ],
-        "comparison": {
-          "compared": true,
-          "methodology": "rules-v1",
-          "notes": "Structured for future weighted scoring and side-by-side strategy comparison."
-        }
-      },
-      "action": {
-        "actualCare": "PT referral created",
-        "completedAt": null
-      },
-      "adherence": {
-        "isAdhered": true,
-        "expectedCare": null,
-        "actualCare": "PT referral created"
-      }
+      "decision": null,
+      "action": null,
+      "adherence": null
     },
     {
       "index": 3,
       "label": "PT_FIRST Selected",
       "at": "2026-04-18T13:29:02.472Z",
       "displayLine": "3. [PT_FIRST Selected] - 6:29:02 pm",
-      "message": "PT_FIRST selected. PT referral created.",
+      "message": "PT_FIRST selected because Pain score is mild to moderate and no red flags are present. No prior failed PT history is recorded, so conservative care is first-line. Recommended care: PT referral created.",
       "step": "DECISION",
       "transition": "DECISION_PENDING -> ACTION_PENDING",
       "actor": "decision-worker",
@@ -275,7 +323,7 @@ Request body:
       },
       "action": {
         "actualCare": "PT referral created",
-        "completedAt": null
+        "completedAt": "2026-04-18T13:29:02.476Z"
       },
       "adherence": {
         "isAdhered": true,
@@ -287,23 +335,46 @@ Request body:
   "logs": [
     {
       "index": 1,
-      "label": "Intake",
       "at": "2026-04-18T13:29:01.580Z",
-      "displayLine": "1. [Intake] - 6:29:01 pm",
-      "message": "Patient reported lower back pain (pain level 3/10, red flags: no). Workflow created and queued for routing.",
       "step": "INTAKE",
       "transition": "CREATED -> QUEUED",
       "actor": "system",
-      "pathway": {
-        "route": "MSK",
-        "confidence": 0.95,
-        "reasoning": "Keyword match - deterministic rules"
-      },
-      "decision": null,
-      "action": null,
-      "adherence": null
+      "message": "Patient reported lower back pain (pain level 3/10, red flags: no). Workflow created and queued for routing.",
+      "route": "MSK",
+      "plan": null,
+      "actualCare": null,
+      "isAdhered": null
     }
   ],
+  "sections": {
+    "timeline": {
+      "role": "primary-rich",
+      "description": "Human-readable, detailed timeline for UI and audit playback."
+    },
+    "logs": {
+      "role": "compact-aligned",
+      "description": "Compact projection of timeline for table/list rendering.",
+      "alignment": {
+        "with": "timeline",
+        "guaranteed": true,
+        "fields": [
+          "index",
+          "step",
+          "transition",
+          "actor",
+          "message"
+        ]
+      }
+    },
+    "rawLogs": {
+      "role": "audit-debug",
+      "description": "Raw transition records with payload snapshots for diagnostics."
+    },
+    "overview": {
+      "role": "final-state",
+      "description": "Final aggregate snapshot of input, pathway, decision, action, and adherence."
+    }
+  },
   "rawLogs": [
     {
       "id": "cmo4dicxl0001umqsadz2kdi5",
@@ -403,77 +474,14 @@ Request body:
       "expectedCare": "PT referral created",
       "actualCare": "PT referral created"
     }
-  }
-}
-```
-
-## GET /api/v1/workflows?status=COMPLETED&limit=20&offset=0
-
-```json
-[
-  {
-    "id": "cmo4dl4vy0002umk09iw9uuxq",
-    "traceId": "f0abf7d1-fedc-4498-a68b-dc1d787327a1",
-    "status": "COMPLETED",
-    "input": {
-      "symptom": "lower back pain",
-      "painLevel": 3,
-      "duration": "2 weeks",
-      "redFlags": false,
-      "age": 34,
-      "patientId": "patient_001",
-      "failedPtHistory": false
-    },
-    "pathway": {
-      "route": "MSK",
-      "confidence": 0.95,
-      "reasoning": "Keyword match - deterministic rules"
-    },
-    "decision": {
-      "plan": "PT_FIRST",
-      "expectedCare": "PT referral created",
-      "rationale": {
-        "selectedBecause": [
-          "Pain score is mild to moderate and no red flags are present.",
-          "No prior failed PT history is recorded, so conservative care is first-line."
-        ],
-        "factors": {
-          "route": "MSK",
-          "painLevel": 3,
-          "redFlags": false,
-          "failedPtHistory": false
-        }
-      },
-      "alternatives": [
-        {
-          "plan": "IMAGING_FIRST",
-          "expectedCare": "Imaging referral created",
-          "ranking": 2,
-          "selected": false,
-          "notSelectedReason": "Not selected because no red flags and no high pain threshold trigger were found."
-        }
-      ],
-      "comparison": {
-        "compared": true,
-        "methodology": "rules-v1",
-        "notes": "Structured for future weighted scoring and side-by-side strategy comparison."
-      }
-    },
-    "action": {
-      "actualCare": "PT referral created",
-      "completedAt": "2026-04-18T13:31:12.912Z"
-    },
-    "adherence": {
-      "isAdhered": true,
-      "expectedCare": "PT referral created",
-      "actualCare": "PT referral created"
-    },
-    "retryCount": 0,
-    "timestamps": {
-      "createdAt": "2026-04-18T13:31:11.998Z",
-      "updatedAt": "2026-04-18T13:31:12.913Z",
-      "completedAt": "2026-04-18T13:31:12.912Z"
+  },
+  "responseMeta": {
+    "includeQuery": null,
+    "rawLogs": {
+      "included": false,
+      "query": "include=raw",
+      "note": "rawLogs are excluded by default and returned only when include=raw is requested."
     }
   }
-]
+}
 ```

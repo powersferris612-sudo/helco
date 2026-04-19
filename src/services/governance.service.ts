@@ -43,10 +43,22 @@ function formatMessage(data: TransitionPayload) {
   }
 
   if (data.step === 'DECISION' && data.decisionMade) {
-    const decisionData = data.decisionMade as { plan?: string; expectedCare?: string };
+    const decisionData = data.decisionMade as {
+      plan?: string;
+      expectedCare?: string;
+      rationale?: { selectedBecause?: string[] };
+    };
     const plan = decisionData.plan ?? 'UNKNOWN_PLAN';
     const care = decisionData.expectedCare ?? 'Care to be determined';
-    return `${plan} selected. ${care}.`;
+    const selectedBecause = Array.isArray(decisionData.rationale?.selectedBecause)
+      ? decisionData.rationale?.selectedBecause.filter((item): item is string => typeof item === 'string').join(' ')
+      : '';
+
+    if (selectedBecause) {
+      return `${plan} selected because ${selectedBecause} Recommended care: ${care}.`;
+    }
+
+    return `${plan} selected. Recommended care: ${care}.`;
   }
 
   if (data.step === 'ACTION' && data.actionTaken) {
