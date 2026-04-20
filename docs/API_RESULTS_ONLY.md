@@ -13,8 +13,8 @@
 ```json
 [
   {
-    "id": "cmo4dl4vy0002umk09iw9uuxq",
-    "traceId": "f0abf7d1-fedc-4498-a68b-dc1d787327a1",
+    "id": "cmo6uljph0000um7cka7z2w7g",
+    "traceId": "5f4c8d2e-9a1f-4e6c-b7d3-2c1a9f5b8e3d",
     "status": "COMPLETED",
     "input": {
       "symptom": "lower back pain",
@@ -22,7 +22,7 @@
       "duration": "2 weeks",
       "redFlags": false,
       "age": 34,
-      "patientId": "patient_001",
+      "patientId": "patient_original_scenario",
       "failedPtHistory": false
     },
     "pathway": {
@@ -62,7 +62,7 @@
     },
     "action": {
       "actualCare": "PT referral created",
-      "completedAt": "2026-04-18T13:31:12.912Z"
+      "completedAt": "2026-04-20T07:02:57.178Z"
     },
     "adherence": {
       "isAdhered": true,
@@ -71,9 +71,9 @@
     },
     "retryCount": 0,
     "timestamps": {
-      "createdAt": "2026-04-18T13:31:11.998Z",
-      "updatedAt": "2026-04-18T13:31:12.913Z",
-      "completedAt": "2026-04-18T13:31:12.912Z"
+      "createdAt": "2026-04-20T07:02:56.845Z",
+      "updatedAt": "2026-04-20T07:02:57.182Z",
+      "completedAt": "2026-04-20T07:02:57.178Z"
     }
   }
 ]
@@ -85,14 +85,14 @@ Request body:
 
 ```json
 {
-  "idempotencyKey": "original-output-20260418183049712",
+  "idempotencyKey": "scenario-1713610976123",
   "payload": {
     "symptom": "lower back pain",
     "painLevel": 3,
     "duration": "2 weeks",
     "redFlags": false,
     "age": 34,
-    "patientId": "patient_001",
+    "patientId": "patient_original_scenario",
     "failedPtHistory": false
   }
 }
@@ -100,7 +100,7 @@ Request body:
 
 ```json
 {
-  "workflowId": "cmo4dknrg0001umk0s0w5o5hk",
+  "workflowId": "cmo6uljph0000um7cka7z2w7g",
   "status": "INITIATED"
 }
 ```
@@ -109,8 +109,8 @@ Request body:
 
 ```json
 {
-  "id": "cmo4dic970004umj0yibkjq51",
-  "traceId": "dd836929-a54e-48f4-95da-6fd634474133",
+  "id": "cmo6uljph0000um7cka7z2w7g",
+  "traceId": "5f4c8d2e-9a1f-4e6c-b7d3-2c1a9f5b8e3d",
   "status": "COMPLETED",
   "input": {
     "symptom": "lower back pain",
@@ -118,7 +118,7 @@ Request body:
     "duration": "2 weeks",
     "redFlags": false,
     "age": 34,
-    "patientId": "patient_case-h",
+    "patientId": "patient_original_scenario",
     "failedPtHistory": false
   },
   "pathway": {
@@ -158,7 +158,7 @@ Request body:
   },
   "action": {
     "actualCare": "PT referral created",
-    "completedAt": "2026-04-18T13:29:02.476Z"
+    "completedAt": "2026-04-20T07:02:57.178Z"
   },
   "adherence": {
     "isAdhered": true,
@@ -167,9 +167,9 @@ Request body:
   },
   "retryCount": 0,
   "timestamps": {
-    "createdAt": "2026-04-18T13:29:01.580Z",
-    "updatedAt": "2026-04-18T13:29:02.478Z",
-    "completedAt": "2026-04-18T13:29:02.476Z"
+    "createdAt": "2026-04-20T07:02:56.845Z",
+    "updatedAt": "2026-04-20T07:02:57.182Z",
+    "completedAt": "2026-04-20T07:02:57.178Z"
   }
 }
 ```
@@ -191,14 +191,14 @@ Raw logs query behavior:
 
 ```json
 {
-  "workflowId": "cmo4dic970004umj0yibkjq51",
+  "workflowId": "cmo6uljph0000um7cka7z2w7g",
   "summary": "Routed to MSK pathway because symptom keyword mapping matched deterministic rules (confidence 0.95) → PT_FIRST selected because: Pain score is mild to moderate and no red flags are present. | No prior failed PT history is recorded, so conservative care is first-line. → PT referral created completed",
   "timeline": [
     {
       "index": 1,
       "label": "Intake",
-      "at": "2026-04-18T13:29:01.580Z",
-      "displayLine": "1. [Intake] - 6:29:01 pm",
+      "at": "2026-04-20T07:02:56.845Z",
+      "displayLine": "1. [Intake] - 7:02:56 am",
       "message": "Patient reported lower back pain (pain level 3/10, red flags: no). Workflow created and queued for routing.",
       "step": "INTAKE",
       "transition": "CREATED -> QUEUED",
@@ -214,10 +214,10 @@ Raw logs query behavior:
     },
     {
       "index": 2,
-      "label": "MSK Routing Complete",
-      "at": "2026-04-18T13:29:02.457Z",
-      "displayLine": "2. [MSK Routing Complete] - 6:29:02 pm",
-      "message": "Routed to MSK pathway (confidence 0.95). Keyword match - deterministic rules",
+      "label": "Route",
+      "at": "2026-04-20T07:02:56.892Z",
+      "displayLine": "2. [Route] - 7:02:56 am",
+      "message": "Symptoms matched MSK Spine Pathway criteria. No red flags detected. Patient assigned to MSK Spine Pathway automatically.",
       "step": "ROUTE",
       "transition": "ROUTING -> DECISION_PENDING",
       "actor": "route-worker",
@@ -232,10 +232,10 @@ Raw logs query behavior:
     },
     {
       "index": 3,
-      "label": "PT_FIRST Selected",
-      "at": "2026-04-18T13:29:02.472Z",
-      "displayLine": "3. [PT_FIRST Selected] - 6:29:02 pm",
-      "message": "PT_FIRST selected because Pain score is mild to moderate and no red flags are present. No prior failed PT history is recorded, so conservative care is first-line. Recommended care: PT referral created.",
+      "label": "Decision",
+      "at": "2026-04-20T07:02:56.956Z",
+      "displayLine": "3. [Decision] - 7:02:56 am",
+      "message": "PT-first pathway selected. Pain score is mild to moderate and no red flags are present. No prior failed PT history is recorded, so conservative care is first-line. Telehealth Physical Therapy recommended as first line of care.",
       "step": "DECISION",
       "transition": "DECISION_PENDING -> ACTION_PENDING",
       "actor": "decision-worker",
@@ -279,10 +279,10 @@ Raw logs query behavior:
     },
     {
       "index": 4,
-      "label": "Action Completed",
-      "at": "2026-04-18T13:29:02.480Z",
-      "displayLine": "4. [Action Completed] - 6:29:02 pm",
-      "message": "PT referral created. Pathway adhered.",
+      "label": "Action",
+      "at": "2026-04-20T07:02:57.015Z",
+      "displayLine": "4. [Action] - 7:02:57 am",
+      "message": "Referral created for City PT Clinic (Telehealth, In-Network). Care navigator notified. Workflow completed. No overrides. Pathway adhered.",
       "step": "ACTION",
       "transition": "ACTION_PENDING -> COMPLETED",
       "actor": "action-worker",
@@ -323,7 +323,7 @@ Raw logs query behavior:
       },
       "action": {
         "actualCare": "PT referral created",
-        "completedAt": "2026-04-18T13:29:02.476Z"
+        "completedAt": "2026-04-20T07:02:57.178Z"
       },
       "adherence": {
         "isAdhered": true,
@@ -335,7 +335,7 @@ Raw logs query behavior:
   "logs": [
     {
       "index": 1,
-      "at": "2026-04-18T13:29:01.580Z",
+      "at": "2026-04-20T07:02:56.845Z",
       "step": "INTAKE",
       "transition": "CREATED -> QUEUED",
       "actor": "system",
@@ -344,6 +344,42 @@ Raw logs query behavior:
       "plan": null,
       "actualCare": null,
       "isAdhered": null
+    },
+    {
+      "index": 2,
+      "at": "2026-04-20T07:02:56.892Z",
+      "step": "ROUTE",
+      "transition": "ROUTING -> DECISION_PENDING",
+      "actor": "route-worker",
+      "message": "Symptoms matched MSK Spine Pathway criteria. No red flags detected. Patient assigned to MSK Spine Pathway automatically.",
+      "route": "MSK",
+      "plan": null,
+      "actualCare": null,
+      "isAdhered": null
+    },
+    {
+      "index": 3,
+      "at": "2026-04-20T07:02:56.956Z",
+      "step": "DECISION",
+      "transition": "DECISION_PENDING -> ACTION_PENDING",
+      "actor": "decision-worker",
+      "message": "PT-first pathway selected. Pain score is mild to moderate and no red flags are present. No prior failed PT history is recorded, so conservative care is first-line. Telehealth Physical Therapy recommended as first line of care.",
+      "route": "MSK",
+      "plan": "PT_FIRST",
+      "actualCare": null,
+      "isAdhered": null
+    },
+    {
+      "index": 4,
+      "at": "2026-04-20T07:02:57.015Z",
+      "step": "ACTION",
+      "transition": "ACTION_PENDING -> COMPLETED",
+      "actor": "action-worker",
+      "message": "Referral created for City PT Clinic (Telehealth, In-Network). Care navigator notified. Workflow completed. No overrides. Pathway adhered.",
+      "route": "MSK",
+      "plan": "PT_FIRST",
+      "actualCare": "PT referral created",
+      "isAdhered": true
     }
   ],
   "sections": {
@@ -357,13 +393,7 @@ Raw logs query behavior:
       "alignment": {
         "with": "timeline",
         "guaranteed": true,
-        "fields": [
-          "index",
-          "step",
-          "transition",
-          "actor",
-          "message"
-        ]
+        "fields": ["index", "step", "transition", "actor", "message"]
       }
     },
     "rawLogs": {
@@ -375,51 +405,6 @@ Raw logs query behavior:
       "description": "Final aggregate snapshot of input, pathway, decision, action, and adherence."
     }
   },
-  "rawLogs": [
-    {
-      "id": "cmo4dicxl0001umqsadz2kdi5",
-      "workflowId": "cmo4dic970004umj0yibkjq51",
-      "traceId": "dd836929-a54e-48f4-95da-6fd634474133",
-      "step": "ROUTE",
-      "title": "MSK Routing Complete",
-      "fromState": "ROUTING",
-      "toState": "DECISION_PENDING",
-      "actor": "route-worker",
-      "narrative": "Routed to MSK pathway because symptom keyword mapping matched deterministic rules (confidence 0.95)",
-      "message": "Routed to MSK pathway (confidence 0.95). Keyword match - deterministic rules",
-      "routingDecision": {
-        "route": "MSK",
-        "confidence": 0.95,
-        "reasoning": "Keyword match - deterministic rules"
-      },
-      "decisionMade": null,
-      "actionTaken": null,
-      "adherenceResult": null,
-      "payloadSnapshot": {
-        "input": {
-          "age": 34,
-          "symptom": "lower back pain",
-          "duration": "2 weeks",
-          "redFlags": false,
-          "painLevel": 3,
-          "patientId": "patient_case-h",
-          "failedPtHistory": false
-        },
-        "pathway": {
-          "route": "MSK",
-          "reasoning": "Keyword match - deterministic rules",
-          "confidence": 0.95
-        }
-      },
-      "pathway": {
-        "route": "MSK",
-        "confidence": 0.95,
-        "reasoning": "Keyword match - deterministic rules"
-      },
-      "decision": null,
-      "createdAt": "2026-04-18T13:29:02.457Z"
-    }
-  ],
   "overview": {
     "input": {
       "symptom": "lower back pain",
@@ -427,7 +412,7 @@ Raw logs query behavior:
       "duration": "2 weeks",
       "redFlags": false,
       "age": 34,
-      "patientId": "patient_case-h",
+      "patientId": "patient_original_scenario",
       "failedPtHistory": false
     },
     "pathway": {
@@ -467,7 +452,7 @@ Raw logs query behavior:
     },
     "action": {
       "actualCare": "PT referral created",
-      "completedAt": null
+      "completedAt": "2026-04-20T07:02:57.178Z"
     },
     "adherence": {
       "isAdhered": true,

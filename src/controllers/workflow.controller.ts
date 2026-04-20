@@ -350,6 +350,36 @@ function inferLogStep(log: Record<string, unknown>) {
   return 'EVENT';
 }
 
+function getStepOrder(step: string) {
+  if (step === 'ROUTE') return 1;
+  if (step === 'DECISION') return 2;
+  if (step === 'ACTION') return 3;
+  if (step === 'FAILURE') return 4;
+  return 5;
+}
+
+function sortLogsForTimeline(logs: Array<Record<string, unknown>>) {
+  return [...logs].sort((left, right) => {
+    const leftTime = toDateValue(left.createdAt).getTime();
+    const rightTime = toDateValue(right.createdAt).getTime();
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
+
+    const leftStep = inferLogStep(left);
+    const rightStep = inferLogStep(right);
+    const leftStepRank = getStepOrder(leftStep);
+    const rightStepRank = getStepOrder(rightStep);
+    if (leftStepRank !== rightStepRank) {
+      return leftStepRank - rightStepRank;
+    }
+
+    const leftId = toStringValue(left.id) ?? '';
+    const rightId = toStringValue(right.id) ?? '';
+    return leftId.localeCompare(rightId);
+  });
+}
+
 function parseIncludeQuery(value: unknown) {
   if (typeof value !== 'string') {
     return { hasIncludeQuery: false, includes: new Set<string>() };
@@ -376,6 +406,7 @@ function normalizeWorkflowLogsResponse(result: {
     completedAt: Date | null;
   };
 }) {
+  const orderedLogs = sortLogsForTimeline(result.logs);
   const workflowContext = asRecord(result.workflow.contextData) ?? {};
   const input = mapWorkflowInput(workflowContext);
   const pathway = mapPathway(workflowContext);
@@ -404,7 +435,7 @@ function normalizeWorkflowLogsResponse(result: {
       action: null,
       adherence: null
     },
-    ...result.logs.map((log, offset) => {
+    ...orderedLogs.map((log, offset) => {
       const snapshot = asRecord(log.payloadSnapshot) ?? {};
       const label = inferLogLabel(log.fromState, log.toState, log.title);
       const step = inferLogStep(log);
@@ -505,7 +536,7 @@ function normalizeWorkflowLogsResponse(result: {
     isAdhered: entry.adherence?.isAdhered ?? null
   }));
 
-  const rawLogs = result.logs.map((log) => {
+  const rawLogs = orderedLogs.map((log) => {
     const snapshot = asRecord(log.payloadSnapshot) ?? {};
 
     return {

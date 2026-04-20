@@ -152,10 +152,29 @@ function buildGovernanceLogApi() {
       governanceRows.push(row);
       return clone(row);
     },
-    async findMany({ where, orderBy }: { where: { workflowId: string }; orderBy?: { createdAt: 'asc' | 'desc' } }) {
+    async findMany({
+      where,
+      orderBy
+    }: {
+      where: { workflowId: string };
+      orderBy?: Array<{ createdAt?: 'asc' | 'desc'; id?: 'asc' | 'desc' }>;
+    }) {
+      const createdAtOrder = orderBy?.find((item) => item.createdAt)?.createdAt;
+      const idOrder = orderBy?.find((item) => item.id)?.id;
       const rows = governanceRows
         .filter((row) => row.workflowId === where.workflowId)
-        .sort((a, b) => (orderBy?.createdAt === 'asc' ? a.createdAt.getTime() - b.createdAt.getTime() : b.createdAt.getTime() - a.createdAt.getTime()));
+        .sort((a, b) => {
+          const createdAtDelta = a.createdAt.getTime() - b.createdAt.getTime();
+          if (createdAtDelta !== 0) {
+            return createdAtOrder === 'desc' ? -createdAtDelta : createdAtDelta;
+          }
+
+          if (idOrder === 'desc') {
+            return b.id.localeCompare(a.id);
+          }
+
+          return a.id.localeCompare(b.id);
+        });
       return clone(rows);
     }
   };

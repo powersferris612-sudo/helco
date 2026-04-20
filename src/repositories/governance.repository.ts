@@ -25,7 +25,7 @@ export class GovernanceRepository {
   async findByWorkflowId(workflowId: string) {
     return prisma.governanceLog.findMany({
       where: { workflowId },
-      orderBy: { createdAt: 'asc' }
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }]
     });
   }
 }
