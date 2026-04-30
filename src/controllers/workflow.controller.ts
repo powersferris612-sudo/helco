@@ -3,6 +3,7 @@ import { z } from 'zod';
 import * as workflowService from '../services/workflow.service';
 import * as governanceService from '../services/governance.service';
 import { buildCanonicalResponse, extractEventTimestamps } from '../services/canonical-response.service';
+import { buildConsolidatedResponse } from '../services/consolidated-response-builder';
 
 const createSchema = z.object({
   idempotencyKey: z.string().min(1),
@@ -339,6 +340,8 @@ function normalizeWorkflowResponse(
     workflowIsAdhered: workflow.isAdhered
   });
 
+  const consolidated = buildConsolidatedResponse(workflow);
+
   return {
     id: workflow.id,
     ingestionRunId: workflow.ingestionRunId,
@@ -350,6 +353,7 @@ function normalizeWorkflowResponse(
     action: mapAction(context, workflow),
     adherence: mapAdherence(context, workflow),
     canonical,
+    consolidated,
     retryCount: workflow.retryCount,
     timestamps: {
       createdAt: workflow.createdAt,
