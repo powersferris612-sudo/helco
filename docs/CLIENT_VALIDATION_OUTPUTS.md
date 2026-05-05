@@ -174,7 +174,7 @@ This note captures the live validation results for the Vagabond PropCo employer 
 {
     "id": "cmohgzom00000umusc3f7j6lt",
     "ingestionRunId": "run_1777310849878_fc6bde03",
-    "employerName": "HealCo Employer",
+    "employerName": "Vagabond PropCo",
     "sourceFileName": "vagabond_propco_employer_data_packet - Claims_2025.csv",
     "status": "COMPLETED",
     "totals": {
@@ -362,7 +362,7 @@ This note captures the live validation results for the Vagabond PropCo employer 
         "pendingWorkflowCount": 0,
         "errors": []
     },
-    "summary": "File vagabond_propco_employer_data_packet - Claims_2025.csv received from employer HealCo Employer. → 603 rows parsed (603 valid, 0 invalid). → 130 MSK-flagged records detected from 603 valid records.",
+    "summary": "File vagabond_propco_employer_data_packet - Claims_2025.csv received from employer Vagabond PropCo. → 603 rows parsed (603 valid, 0 invalid). → 130 MSK-flagged records detected from 603 valid records.",
     "timeline": [
         {
             "index": 1,
@@ -371,7 +371,7 @@ This note captures the live validation results for the Vagabond PropCo employer 
             "toState": "RECEIVED",
             "actor": "ingestion-service",
             "title": "File Ingested",
-            "message": "File vagabond_propco_employer_data_packet - Claims_2025.csv received from employer HealCo Employer.",
+            "message": "File vagabond_propco_employer_data_packet - Claims_2025.csv received from employer Vagabond PropCo.",
             "at": "2026-04-27T17:27:29.896Z"
         },
         {
@@ -406,15 +406,15 @@ This note captures the live validation results for the Vagabond PropCo employer 
             "toState": "RECEIVED",
             "actor": "ingestion-service",
             "title": "File Ingested",
-            "narrative": "File vagabond_propco_employer_data_packet - Claims_2025.csv received from employer HealCo Employer.",
-            "message": "File vagabond_propco_employer_data_packet - Claims_2025.csv received from employer HealCo Employer.",
+            "narrative": "File vagabond_propco_employer_data_packet - Claims_2025.csv received from employer Vagabond PropCo.",
+            "message": "File vagabond_propco_employer_data_packet - Claims_2025.csv received from employer Vagabond PropCo.",
             "routingDecision": null,
             "decisionMade": null,
             "actionTaken": null,
             "adherenceResult": null,
             "payloadSnapshot": {
                 "fileName": "vagabond_propco_employer_data_packet - Claims_2025.csv",
-                "employerName": "HealCo Employer",
+                "employerName": "Vagabond PropCo",
                 "sourceChecksum": "c3c7219acd09de70782918da1aeb7d64260a604e00dc2a70fe6b5c0e5bae7461",
                 "sourceFileType": "CSV"
             },
