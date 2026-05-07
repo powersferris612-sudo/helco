@@ -340,9 +340,15 @@ function normalizeWorkflowResponse(
     workflowIsAdhered: workflow.isAdhered
   });
 
+  const consolidatedWorkflow = {
+    id: workflow.id,
+    contextData: asRecord(workflow.contextData) ?? {},
+    createdAt: workflow.createdAt,
+    updatedAt: workflow.updatedAt
+  };
+
   const consolidated = buildConsolidatedResponse({
-    ...workflow,
-    contextData: asRecord(workflow.contextData) ?? {}
+    ...consolidatedWorkflow
   });
 
   return {
